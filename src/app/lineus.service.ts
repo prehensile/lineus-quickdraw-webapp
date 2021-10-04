@@ -130,20 +130,6 @@ export class LineUsService implements OnDestroy, OnInit {
         });
     }
 
-    fetchJSONDataForCategory() {
-        const dataURL = "https://quickdraw_dataset.storage.googleapis.com/full/simplified/canoe.ndjson";
-        const proxiedURL = "https://api.allorigins.win/get?url=" + encodeURIComponent(dataURL);
-
-        this.httpClient.get(proxiedURL).subscribe(data => {
-            this.onJSONDataReceived(data);
-        })
-    }
-
-    onJSONDataReceived( data: any ) {
-        const drawing = this.extractRandomDrawing( data );
-        this.sendDrawingToBot( drawing );
-    }
-
     fetchBinaryDataForCategory( category: string, callback: any ) {
         category = encodeURIComponent( category );
         const dataURL = `https://quickdraw_dataset.storage.googleapis.com/full/binary/${category}.bin`;
@@ -176,22 +162,26 @@ export class LineUsService implements OnDestroy, OnInit {
         this.sendDrawingToBot( drawing );
     }*/
 
-    randomElement( container: any ) {
-        return container[ Math.floor(container.length * Math.random()) ];
+    fetchJSONDataForCategory() {
+        const dataURL = "https://quickdraw_dataset.storage.googleapis.com/full/simplified/canoe.ndjson";
+        const proxiedURL = "https://api.allorigins.win/get?url=" + encodeURIComponent(dataURL);
+
+        this.httpClient.get(proxiedURL).subscribe(data => {
+            this.onJSONDataReceived(data);
+        })
     }
 
-    extractRandomDrawing( data: any ){
+    extractRandomDrawingFromJSONData( data: any ){
         const lines = data.contents.split( "\n" );
         const line: string = this.randomElement( lines );
-        const parsed = JSON.parse( line );
-        // const drawing : string = parsed["drawing"];
-        // // drawing is an array of strokes
-        // // a stroke is a 2-element array: stroke[0] is x-coords, stroke[1] is y-coords
-        // console.log( drawing );
-        // return drawing;
-        return parsed;
+        return JSON.parse( line );
     }
-    
+
+    onJSONDataReceived( data: any ) {
+        const drawing = this.extractRandomDrawingFromJSONData( data );
+        this.sendDrawingToBot( drawing );
+    }
+
     sendDrawingToBot( drawingItem :any ){
 
         console.log( "sendDrawingToBot..." );
@@ -277,6 +267,10 @@ export class LineUsService implements OnDestroy, OnInit {
         return arr1.map(function(e:any, i:any) {
             return [e, arr2[i]];
         });
+    }
+
+    randomElement( container: any ) {
+        return container[ Math.floor(container.length * Math.random()) ];
     }
 
 }
