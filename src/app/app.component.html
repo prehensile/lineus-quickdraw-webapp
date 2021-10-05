@@ -1,16 +1,29 @@
-<section>
-<h4>Drawing selector</h4>
-<mat-form-field appearance="fill">
-  <mat-label>Drawing category</mat-label>
-  <mat-select [(value)]="valSelectCategory">
-    <mat-option *ngFor="let category of categories" [value]="category.value">
-      {{category.viewValue}}
-    </mat-option>
-  </mat-select>
-</mat-form-field>
-<button mat-raised-button color="primary" (click)="onDrawButtonClick()">Draw!</button>
-</section>
-
-<canvas width="563" height="1000" id="canvasDrawing">
-  An alternative text describing what your canvas displays.
-</canvas>
+<div id="app-component">
+    <h1>Quick, Draw, Line-Us!</h1>
+    <mat-card id="category-selector">
+        <h4>Drawing controls</h4>
+        <div fxLayout="row" fxLayoutAlign="start center">
+            <mat-form-field appearance="fill">
+                <mat-label>Drawing category</mat-label>
+                <mat-select [(value)]="valSelectCategory">
+                    <mat-option *ngFor="let category of categories" [value]="category.value">
+                        {{category.viewValue}}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+            <button class="toolbar-item" mat-raised-button color="primary" (click)="onDrawButtonClick()">Draw!</button>
+            <mat-form-field class="example-full-width toolbar-item" appearance="fill">
+                <mat-label>Robot address</mat-label>
+                <input matInput placeholder="eg. line-us.local" [value]="botAddress">
+            </mat-form-field>
+            <mat-checkbox class="toolbar-item" [checked]="boolBotEnabled" (change)="boolBotEnabled = !boolBotEnabled">Robot enabled</mat-checkbox>
+        </div>
+        <mat-progress-bar mode="indeterminate" *ngIf="showActivity"></mat-progress-bar>
+        <p id="status-display">Ready!</p>
+    </mat-card>
+    <div fxLayout="row" fxLayoutAlign="center start">
+        <canvas width="563" height="1000" id="canvas-drawing">
+      An alternative text describing what your canvas displays.
+    </canvas>
+    </div>
+</div>

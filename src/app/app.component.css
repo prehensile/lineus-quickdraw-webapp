@@ -1,3 +1,27 @@
 canvas {
     border: 1px black solid;
+    background-color: white;
+}
+
+.mat-progress-spinner {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+}
+
+.toolbar-item {
+    margin: 0 0 0 1.5vw;
+}
+
+#category-selector {
+    margin: 2vw 0;
+}
+
+#status-display {
+    display: block;
+    background-color: black;
+    font-family: 'Courier New', Courier, monospace;
+    color: #00FF00;
+    padding: 0.75em;
+    border-radius: 4px;
 }

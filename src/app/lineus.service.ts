@@ -88,8 +88,11 @@ const big256 = BigInt(256);
 @Injectable()
 export class LineUsService implements OnDestroy, OnInit {
 
-    _bot : any;
+    _bot : any = null;
     _parser : BinaryParser;
+    botEnabled : boolean = true;
+    onStatusMessage : any = null;
+    botAddress : string = "linef-us.local";
 
     constructor(private httpClient: HttpClient) {
         this._parser = new BinaryParser();
@@ -103,19 +106,25 @@ export class LineUsService implements OnDestroy, OnInit {
         console.log('Service ngOnDestroy');
     }
 
+    updateStatus( status :string ){
+        if( this.onStatusMessage != null ) this.onStatusMessage( status );
+    }
+
     getBot() {
-
-        if( !this._bot ){
-
-            const opts = {
-                url: 'ws://line-us.local',
-                autoConnect: true,
-                autoStart: true,
-                concurrency: 3
-            };
-
-            this._bot = new LineUs({ opts });
+        
+        if( this._bot ){
+            this._bot.disconnect();
+            this._bot = null;
         }
+
+        const opts = {
+            url: 'ws://' + this.botAddress,
+            autoConnect: true,
+            autoStart: true,
+            concurrency: 3
+        };
+
+        this._bot = new LineUs({ opts });
 
         return this._bot
 
@@ -135,7 +144,7 @@ export class LineUsService implements OnDestroy, OnInit {
         const dataURL = `https://quickdraw_dataset.storage.googleapis.com/full/binary/${category}.bin`;
         const proxiedURL = "https://api.allorigins.win/raw?url=" + encodeURIComponent(dataURL);
 
-        console.log( "Fetch binary data..." )
+        this.updateStatus( "Fetching binary data..." )
 
         this.httpClient.get(
             proxiedURL, {
@@ -148,7 +157,7 @@ export class LineUsService implements OnDestroy, OnInit {
     }
 
     parseBinaryData( data: any ){
-        console.log("parseBinaryData");
+        this.updateStatus("Parsing binary data...");
         const buf = Buffer.from( data );
         return this._parser.parseBinaryDrawings( buf );
     }
@@ -162,12 +171,14 @@ export class LineUsService implements OnDestroy, OnInit {
         this.sendDrawingToBot( drawing );
     }*/
 
-    fetchJSONDataForCategory() {
-        const dataURL = "https://quickdraw_dataset.storage.googleapis.com/full/simplified/canoe.ndjson";
+    fetchJSONDataForCategory( category: string, callback?: any ) {
+        category = encodeURIComponent( category );
+        const dataURL = `https://quickdraw_dataset.storage.googleapis.com/full/simplified/${category}.ndjson`;
         const proxiedURL = "https://api.allorigins.win/get?url=" + encodeURIComponent(dataURL);
 
         this.httpClient.get(proxiedURL).subscribe(data => {
             this.onJSONDataReceived(data);
+            callback( data );
         })
     }
 
@@ -184,17 +195,17 @@ export class LineUsService implements OnDestroy, OnInit {
 
     sendDrawingToBot( drawingItem :any ){
 
-        console.log( "sendDrawingToBot..." );
+        this.updateStatus( "Sending drawing to bot..." );
 
         const scaleFactor : number = (safeArea.xmax - safeArea.xmin) / (qdDrawingSize.xmax - qdDrawingSize.xmin);
         const offsetY : number = safeArea.center.y - ( (qdDrawingSize.ymax-qdDrawingSize.ymin)*scaleFactor*0.5)
 
 
-        // use this arr to keep track of straokes as drawn
+        // use this arr to keep track of strokes as drawn
         const strokesDrawn = [];
         
         const strokes = this.preProcessDrawing( drawingItem.drawing );
-        const bot = this.getBot();
+        const bot = this.botEnabled ? this.getBot() : null;
 
         for( var i=0; i< strokes.length; i++ ){
             const stroke = strokes[i];
@@ -209,11 +220,13 @@ export class LineUsService implements OnDestroy, OnInit {
                 p[0] += safeArea.xmin;
                 p[1] += safeArea.ymin + offsetY;
 
-                // format this point for the line-us library
-                const xy = { x: p[0], y : p[1] };
-
-                if( ii == 0 ) bot.moveTo( xy );
-                else bot.lineTo( xy );
+                if( this.botEnabled ){
+                    // format this point for the line-us library
+                    const xy = { x: p[0], y : p[1] };
+                    
+                    if( ii == 0 ) bot.moveTo( xy );
+                    else bot.lineTo( xy );
+                }
 
                 // add the point as drawn to the current strokeDrawn array
                 strokeDrawn.push( p ); 
@@ -222,7 +235,7 @@ export class LineUsService implements OnDestroy, OnInit {
             strokesDrawn.push( strokeDrawn );
         }
 
-        bot.home();
+        if( this.botEnabled ) bot.home();
 
         // return the strokes we actually drew
         return( strokesDrawn );

@@ -24,25 +24,47 @@ export class AppComponent implements OnInit {
   ngOnInit() {
 
     // this.lineusService.fetchBinaryData();
+    const that = this;
+    this.lineusService.onStatusMessage = function( message :any ){
+      that.onStatusUpdate( message );
+    }
     
   }
 
   valSelectCategory = '';
+  showActivity = false;
+  boolBotEnabled = true;
+  botAddress : string = "line-us.local";
 
-  onDrawButtonClick( event?: MouseEvent ) {
-    console.log( this.valSelectCategory );
-    this.onCategorySelected( this.valSelectCategory );
+  onDrawButtonClick( event?: MouseEvent ) {  
+    if( this.valSelectCategory ){
+      this.onCategorySelected( this.valSelectCategory );
+    }
   }
 
   onCategorySelected( category: string ){
+
+    this.lineusService.botAddress = this.botAddress;
+    this.lineusService.botEnabled = this.boolBotEnabled;
+
+    this.showActivity = true;
+
     this.lineusService.makeRandomDrawingForCategory( category, (strokes:any) =>{
       this.onDrawingSelected( strokes );
+      this.showActivity = false;
     } );
+
+  }
+
+  onStatusUpdate( status:string ){
+    const statusItem : any = document.getElementById('status-display');
+    statusItem.innerHTML = status;
+    console.log( status );
   }
 
   onDrawingSelected( strokes: any ){
 
-    var canvas : any = document.getElementById('canvasDrawing');
+    var canvas : any = document.getElementById('canvas-drawing');
     if (canvas.getContext) {
       
       var ctx = canvas.getContext('2d');
