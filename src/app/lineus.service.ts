@@ -111,39 +111,60 @@ export class LineUsService implements OnDestroy, OnInit {
     }
 
     getBot() {
-        
-        if( this._bot ){
-            this._bot.disconnect();
+
+        if( this._bot && this._bot.state == "disconnected" ){
             this._bot = null;
         }
 
-        const opts = {
-            url: 'ws://' + this.botAddress,
-            autoConnect: true,
-            autoStart: true,
-            concurrency: 3
-        };
+        if( !this._bot ){
 
-        this._bot = new LineUs({ opts });
+            const opts = {
+                url: 'ws://' + this.botAddress,
+                autoConnect: true,
+                autoStart: true,
+                concurrency: 3
+            };
+
+            this._bot = new LineUs({ opts });
+        }
 
         return this._bot
 
     }
 
-    makeRandomDrawingForCategory( category: string, callback?:any ){
+    makeRandomDrawingForCategory( category: string, mode: string, callback?:any ){
 
-        this.fetchBinaryDataForCategory( category, (data: any) => {
-            const drawing = this.randomElement( data );
-            const strokes = this.sendDrawingToBot( drawing );
-            callback( strokes );
-        });
+        if( mode == 'binary' ){
+
+            this.fetchBinaryDataForCategory( category, (data: any) => {
+                const drawing = this.randomElement( data );
+                const strokes = this.sendDrawingToBot( drawing );
+                callback( strokes );
+            });
+
+        } else {
+
+            this.fetchJSONDataForCategory( category, (data: any) => {
+                const drawing = this.extractRandomDrawingFromJSONData( data );
+                const strokes = this.sendDrawingToBot( drawing );
+                callback( strokes );
+            });
+
+        }
+    }
+
+    proxiedURL( url:string, raw?: boolean ){
+        let proxyURL = "https://api.allorigins.win/";
+        proxyURL += raw ? "raw" : "get"; 
+        return proxyURL + "?url=" + encodeURIComponent(url);
     }
 
     fetchBinaryDataForCategory( category: string, callback: any ) {
         category = encodeURIComponent( category );
-        const dataURL = `https://quickdraw_dataset.storage.googleapis.com/full/binary/${category}.bin`;
-        const proxiedURL = "https://api.allorigins.win/raw?url=" + encodeURIComponent(dataURL);
-
+        const proxiedURL = this.proxiedURL(
+            `https://quickdraw_dataset.storage.googleapis.com/full/binary/${category}.bin`,
+            true
+        );
         this.updateStatus( "Fetching binary data..." )
 
         this.httpClient.get(
@@ -162,22 +183,15 @@ export class LineUsService implements OnDestroy, OnInit {
         return this._parser.parseBinaryDrawings( buf );
     }
 
-    /*
-    onBinaryDataReceived( data: any ){
-        //console.log("onBinaryDataReceived...");
-        //const drawings = this.parseBinaryData( data );
-        console.log("...select a random drawing");
-        const drawing = this.randomElement( drawings );
-        this.sendDrawingToBot( drawing );
-    }*/
-
     fetchJSONDataForCategory( category: string, callback?: any ) {
         category = encodeURIComponent( category );
-        const dataURL = `https://quickdraw_dataset.storage.googleapis.com/full/simplified/${category}.ndjson`;
-        const proxiedURL = "https://api.allorigins.win/get?url=" + encodeURIComponent(dataURL);
+        const proxiedURL = this.proxiedURL(
+            `https://quickdraw_dataset.storage.googleapis.com/full/simplified/${category}.ndjson`
+        );
+
+        this.updateStatus( "Fetching JSON data..." )
 
         this.httpClient.get(proxiedURL).subscribe(data => {
-            this.onJSONDataReceived(data);
             callback( data );
         })
     }
@@ -186,11 +200,6 @@ export class LineUsService implements OnDestroy, OnInit {
         const lines = data.contents.split( "\n" );
         const line: string = this.randomElement( lines );
         return JSON.parse( line );
-    }
-
-    onJSONDataReceived( data: any ) {
-        const drawing = this.extractRandomDrawingFromJSONData( data );
-        this.sendDrawingToBot( drawing );
     }
 
     sendDrawingToBot( drawingItem :any ){
@@ -284,6 +293,18 @@ export class LineUsService implements OnDestroy, OnInit {
 
     randomElement( container: any ) {
         return container[ Math.floor(container.length * Math.random()) ];
+    }
+
+    wave(){
+        
+        if( !this.botEnabled ) return;
+        
+        const bot = this.getBot();
+
+        bot.penUp();
+        bot.moveTo({x:0,y:0});
+        bot.moveTo({x:drawableArea.xmax,y:0});
+        bot.home();
     }
 
 }
